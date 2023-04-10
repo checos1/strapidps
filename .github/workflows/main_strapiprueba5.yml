@@ -1,0 +1,51 @@
+# Docs for the Azure Web Apps Deploy action: https://github.com/Azure/webapps-deploy
+# More GitHub Actions for Azure: https://github.com/Azure/actions
+
+name: Build and deploy container app to Azure Web App - strapiprueba5
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: 'ubuntu-latest'
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v1
+
+    - name: Log in to registry
+      uses: docker/login-action@v1
+      with:
+        registry: https://mcr.microsoft.com/
+        username: ${{ secrets.AzureAppService_ContainerUsername_c761027ebd7e4b76919c4b6891a2f5d5 }}
+        password: ${{ secrets.AzureAppService_ContainerPassword_eada2e4d6f8f41358aadaaf596ca50ce }}
+
+    - name: Build and push container image to registry
+      uses: docker/build-push-action@v2
+      with:
+        push: true
+        tags: mcr.microsoft.com/${{ secrets.AzureAppService_ContainerUsername_c761027ebd7e4b76919c4b6891a2f5d5 }}/appsvc/staticsite:${{ github.sha }}
+        file: ./Dockerfile
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build
+    environment:
+      name: 'production'
+      url: ${{ steps.deploy-to-webapp.outputs.webapp-url }}
+
+    steps:
+    - name: Deploy to Azure Web App
+      id: deploy-to-webapp
+      uses: azure/webapps-deploy@v2
+      with:
+        app-name: 'strapiprueba5'
+        slot-name: 'production'
+        publish-profile: ${{ secrets.AzureAppService_PublishProfile_272a8f5cd097451ca1f572aa7dd3eee9 }}
+        images: 'mcr.microsoft.com/${{ secrets.AzureAppService_ContainerUsername_c761027ebd7e4b76919c4b6891a2f5d5 }}/appsvc/staticsite:${{ github.sha }}'
